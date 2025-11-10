@@ -1,4 +1,5 @@
 import { Shield, Mail, Phone, MapPin } from 'lucide-react';
+import Link from 'next/link';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -41,7 +42,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                <span className="text-sm">phqjk@jkpolice.gov.in</span>
+                <span className="text-sm"><Link href="mailto:phqjk@jkpolice.gov.in">phqjk@jkpolice.gov.in</Link></span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
