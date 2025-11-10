@@ -20,6 +20,10 @@ const schema = Joi.object({
   landlordPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
   tenantName: Joi.string().required(),
   tenantPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
+  fatherName: Joi.string().optional(),
+  aadharNumber: Joi.string().pattern(/^\d{12}$/).optional(),
+  purposeOfStay: Joi.string().optional(),
+  previousAddress: Joi.string().optional(),
   address: Joi.string().required(),
   stationId: Joi.string().required(),
 });
@@ -29,6 +33,10 @@ type FormData = {
   landlordPhone: string;
   tenantName: string;
   tenantPhone: string;
+  fatherName?: string;
+  aadharNumber?: string;
+  purposeOfStay?: string;
+  previousAddress?: string;
   address: string;
   stationId: string;
 };
@@ -40,6 +48,8 @@ export default function LandlordForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationId, setVerificationId] = useState<string>('');
   const [otpError, setOtpError] = useState<string>('');
+  const [files, setFiles] = useState<{ tenantPhoto?: File; aadharPhoto?: File; familyPhoto?: File }>({});
+  const [fileErrors, setFileErrors] = useState<string>('');
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>({
     resolver: joiResolver(schema),
@@ -47,12 +57,33 @@ export default function LandlordForm() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    setFileErrors('');
+
+    // Validate file sizes
+    const totalSize = Object.values(files).reduce((sum, file) => sum + (file?.size || 0), 0);
+    if (totalSize > 6 * 1024 * 1024) {
+      setFileErrors('Total file size exceeds 6MB limit');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const response = await api.post('/landlord/request', data);
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value) formData.append(key, value);
+      });
+      if (files.tenantPhoto) formData.append('tenantPhoto', files.tenantPhoto);
+      if (files.aadharPhoto) formData.append('aadharPhoto', files.aadharPhoto);
+      if (files.familyPhoto) formData.append('familyPhoto', files.familyPhoto);
+
+      const response = await api.post('/landlord/request', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setVerificationId(response.data.verificationId);
       setCurrentStep('otp');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submission failed:', error);
+      setFileErrors(error.response?.data?.error || 'Submission failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -169,6 +200,59 @@ export default function LandlordForm() {
                 </div>
               </div>
 
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="fatherName">Father's Name *</Label>
+                  <Input
+                    id="fatherName"
+                    {...register('fatherName')}
+                    placeholder="Enter father's full name"
+                  />
+                  {errors.fatherName && (
+                    <p className="text-sm text-red-600 mt-1">{errors.fatherName.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="aadharNumber">Aadhaar Number *</Label>
+                  <Input
+                    id="aadharNumber"
+                    {...register('aadharNumber')}
+                    placeholder="123456789012"
+                    maxLength={12}
+                  />
+                  {errors.aadharNumber && (
+                    <p className="text-sm text-red-600 mt-1">{errors.aadharNumber.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="purposeOfStay">Purpose of Stay *</Label>
+                <Textarea
+                  id="purposeOfStay"
+                  {...register('purposeOfStay')}
+                  placeholder="Enter purpose of stay"
+                  rows={2}
+                />
+                {errors.purposeOfStay && (
+                  <p className="text-sm text-red-600 mt-1">{errors.purposeOfStay.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="previousAddress">Previous Address *</Label>
+                <Textarea
+                  id="previousAddress"
+                  {...register('previousAddress')}
+                  placeholder="Enter previous address"
+                  rows={2}
+                />
+                {errors.previousAddress && (
+                  <p className="text-sm text-red-600 mt-1">{errors.previousAddress.message}</p>
+                )}
+              </div>
+
               <div>
                 <Label htmlFor="address">Property Address *</Label>
                 <Textarea
@@ -198,6 +282,67 @@ export default function LandlordForm() {
                 </Select>
                 {errors.stationId && (
                   <p className="text-sm text-red-600 mt-1">{errors.stationId.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <Label>Upload Photos (Max 2MB each)</Label>
+
+                <div>
+                  <Label htmlFor="tenantPhoto">Tenant Photograph *</Label>
+                  <Input
+                    id="tenantPhoto"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.size > 2 * 1024 * 1024) {
+                        alert('Tenant photo must be less than 2MB');
+                        return;
+                      }
+                      setFiles(prev => ({ ...prev, tenantPhoto: file }));
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="aadharPhoto">Aadhaar Photograph *</Label>
+                  <Input
+                    id="aadharPhoto"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.size > 2 * 1024 * 1024) {
+                        alert('Aadhaar photo must be less than 2MB');
+                        return;
+                      }
+                      setFiles(prev => ({ ...prev, aadharPhoto: file }));
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="familyPhoto">Family Photograph *</Label>
+                  <Input
+                    id="familyPhoto"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.size > 2 * 1024 * 1024) {
+                        alert('Family photo must be less than 2MB');
+                        return;
+                      }
+                      setFiles(prev => ({ ...prev, familyPhoto: file }));
+                    }}
+                  />
+                </div>
+
+                {fileErrors && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{fileErrors}</AlertDescription>
+                  </Alert>
                 )}
               </div>
 

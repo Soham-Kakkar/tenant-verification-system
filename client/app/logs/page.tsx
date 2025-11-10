@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { api } from '@/lib/api';
 import { Shield, ArrowLeft } from 'lucide-react';
 
@@ -15,6 +16,13 @@ interface LogEntry {
   landlordPhone: string;
   tenantName: string;
   tenantPhone?: string;
+  fatherName?: string;
+  aadharNumber?: string;
+  purposeOfStay?: string;
+  previousAddress?: string;
+  tenantPhoto?: Array<{ url: string; filename: string; size: number }>;
+  aadharPhoto?: Array<{ url: string; filename: string; size: number }>;
+  familyPhoto?: Array<{ url: string; filename: string; size: number }>;
   address: string;
   status: 'verified' | 'flagged';
   regionId: { name: string };
@@ -91,11 +99,15 @@ export default function LogsPage() {
                     <TableHead>Region</TableHead>
                     <TableHead>Police Station</TableHead>
                     <TableHead>Landlord Name</TableHead>
-                    <TableHead>Address</TableHead>
                     <TableHead>Tenant Name</TableHead>
-                    <TableHead>Tenant Phone</TableHead>
+                    <TableHead>Father's Name</TableHead>
+                    <TableHead>Aadhaar</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Previous Address</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Photos</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -108,11 +120,18 @@ export default function LogsPage() {
                         {log.stationId?.name || 'N/A'}
                       </TableCell>
                       <TableCell>{log.landlordName}</TableCell>
+                      <TableCell>{log.tenantName}</TableCell>
+                      <TableCell>{log.fatherName || 'N/A'}</TableCell>
+                      <TableCell>{log.aadharNumber || 'N/A'}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={log.purposeOfStay}>
+                        {log.purposeOfStay || 'N/A'}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate" title={log.previousAddress}>
+                        {log.previousAddress || 'N/A'}
+                      </TableCell>
                       <TableCell className="max-w-xs truncate" title={log.address}>
                         {log.address}
                       </TableCell>
-                      <TableCell>{log.tenantName}</TableCell>
-                      <TableCell>{log.tenantPhone || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge className={getStatusBadge(log.status)}>
                           {log.status.toUpperCase()}
@@ -120,6 +139,45 @@ export default function LogsPage() {
                       </TableCell>
                       <TableCell>
                         {new Date(log.updatedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {(log.tenantPhoto?.length || log.aadharPhoto?.length || log.familyPhoto?.length) ? (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline">View</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Verification Photos</DialogTitle>
+                                <DialogDescription>
+                                  Photos for {log.tenantName}
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {log.tenantPhoto?.map((photo, idx) => (
+                                  <div key={idx}>
+                                    <p className="text-sm font-medium">Tenant Photo</p>
+                                    <img src={`http://localhost:4000${photo.url}`} alt="Tenant" className="w-full h-32 object-cover rounded" />
+                                  </div>
+                                ))}
+                                {log.aadharPhoto?.map((photo, idx) => (
+                                  <div key={idx}>
+                                    <p className="text-sm font-medium">Aadhaar Photo</p>
+                                    <img src={`http://localhost:4000${photo.url}`} alt="Aadhaar" className="w-full h-32 object-cover rounded" />
+                                  </div>
+                                ))}
+                                {log.familyPhoto?.map((photo, idx) => (
+                                  <div key={idx}>
+                                    <p className="text-sm font-medium">Family Photo</p>
+                                    <img src={`http://localhost:4000${photo.url}`} alt="Family" className="w-full h-32 object-cover rounded" />
+                                  </div>
+                                ))}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        ) : (
+                          'None'
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

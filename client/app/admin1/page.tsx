@@ -101,6 +101,9 @@ export default function Admin1Dashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tenant</TableHead>
+                    <TableHead>Father's Name</TableHead>
+                    <TableHead>Aadhaar</TableHead>
+                    <TableHead>Purpose</TableHead>
                     <TableHead>Landlord</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Assigned To</TableHead>
@@ -115,6 +118,11 @@ export default function Admin1Dashboard() {
                           <div className="font-medium">{verification.tenantName}</div>
                           <div className="text-sm text-gray-500">{verification.tenantPhone}</div>
                         </div>
+                      </TableCell>
+                      <TableCell>{verification.fatherName || 'N/A'}</TableCell>
+                      <TableCell>{verification.aadharNumber || 'N/A'}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={verification.purposeOfStay}>
+                        {verification.purposeOfStay || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -166,6 +174,41 @@ export default function Admin1Dashboard() {
                             >
                               View Details
                             </Button>
+                          )}
+                          {(verification.tenantPhoto?.length || verification.aadharPhoto?.length || verification.familyPhoto?.length) && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="outline">View Photos</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Verification Photos</DialogTitle>
+                                  <DialogDescription>
+                                    Photos uploaded for {verification.tenantName}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  {verification.tenantPhoto?.map((photo, idx) => (
+                                    <div key={idx}>
+                                      <p className="text-sm font-medium">Tenant Photo</p>
+                                      <img src={`http://localhost:4000${photo.url}`} alt="Tenant" className="w-full h-32 object-cover rounded" />
+                                    </div>
+                                  ))}
+                                  {verification.aadharPhoto?.map((photo, idx) => (
+                                    <div key={idx}>
+                                      <p className="text-sm font-medium">Aadhaar Photo</p>
+                                      <img src={`http://localhost:4000${photo.url}`} alt="Aadhaar" className="w-full h-32 object-cover rounded" />
+                                    </div>
+                                  ))}
+                                  {verification.familyPhoto?.map((photo, idx) => (
+                                    <div key={idx}>
+                                      <p className="text-sm font-medium">Family Photo</p>
+                                      <img src={`http://localhost:4000${photo.url}`} alt="Family" className="w-full h-32 object-cover rounded" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           )}
                         </div>
                       </TableCell>

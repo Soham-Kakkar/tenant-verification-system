@@ -33,7 +33,14 @@ export interface Verification {
   landlordName: string;
   landlordPhone: string;
   tenantName: string;
-  tenantPhone: string;
+  tenantPhone?: string;
+  fatherName?: string;
+  aadharNumber?: string;
+  purposeOfStay?: string;
+  previousAddress?: string;
+  tenantPhoto?: Array<{ url: string; filename: string; size: number }>;
+  aadharPhoto?: Array<{ url: string; filename: string; size: number }>;
+  familyPhoto?: Array<{ url: string; filename: string; size: number }>;
   address: string;
   stationId: string;
   regionId: string;

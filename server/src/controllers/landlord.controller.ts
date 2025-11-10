@@ -5,13 +5,19 @@ import Notification from '../models/notification.model';
 import User from '../models/user.model';
 import Station from '../models/station.model';
 import { SmsService } from '../services/sms.service';
+import { validateTotalSize } from '../middlewares/upload.middleware';
 import crypto from 'crypto';
+import path from 'path';
 
 const createRequestSchema = Joi.object({
   landlordName: Joi.string().required(),
   landlordPhone: Joi.string().required(),
   tenantName: Joi.string().required(),
   tenantPhone: Joi.string(),
+  fatherName: Joi.string(),
+  aadharNumber: Joi.string().pattern(/^\d{12}$/).optional(),
+  purposeOfStay: Joi.string(),
+  previousAddress: Joi.string(),
   address: Joi.string(),
   stationId: Joi.string().required(),
 });
@@ -23,12 +29,30 @@ export const createRequest = async (req: Request, res: Response) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { landlordName, landlordPhone, tenantName, tenantPhone, address, stationId } = value;
+    const { landlordName, landlordPhone, tenantName, tenantPhone, fatherName, aadharNumber, purposeOfStay, previousAddress, address, stationId } = value;
 
     const station = await Station.findOne({ name: stationId }).lean();
     if (!station) {
       return res.status(400).json({ error: 'Invalid station' });
     }
+
+    // Handle file uploads
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const tenantPhoto = files?.tenantPhoto?.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      size: file.size
+    })) || [];
+    const aadharPhoto = files?.aadharPhoto?.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      size: file.size
+    })) || [];
+    const familyPhoto = files?.familyPhoto?.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      size: file.size
+    })) || [];
 
     // Generate OTP
     const otpCode = crypto.randomInt(100000, 999999).toString();
@@ -38,6 +62,13 @@ export const createRequest = async (req: Request, res: Response) => {
       landlordPhone,
       tenantName,
       tenantPhone,
+      fatherName,
+      aadharNumber,
+      purposeOfStay,
+      previousAddress,
+      tenantPhoto,
+      aadharPhoto,
+      familyPhoto,
       address,
       stationId: station._id,
       regionId: station.regionId,

@@ -13,6 +13,13 @@ export interface IVerification extends Document {
   landlordPhone: string;
   tenantName: string;
   tenantPhone?: string;
+  fatherName?: string;
+  aadharNumber?: string;
+  purposeOfStay?: string;
+  previousAddress?: string;
+  tenantPhoto?: { url: string; filename: string; size: number }[];
+  aadharPhoto?: { url: string; filename: string; size: number }[];
+  familyPhoto?: { url: string; filename: string; size: number }[];
   tenantIdDocs?: { url: string; filename: string }[];
   address?: string;
   stationId: Schema.Types.ObjectId;
@@ -38,6 +45,13 @@ const VerificationSchema = new Schema<IVerification>({
   landlordPhone: { type: String, required: true },
   tenantName: { type: String, required: true },
   tenantPhone: String,
+  fatherName: String,
+  aadharNumber: String,
+  purposeOfStay: String,
+  previousAddress: String,
+  tenantPhoto: [{ url: String, filename: String, size: Number }],
+  aadharPhoto: [{ url: String, filename: String, size: Number }],
+  familyPhoto: [{ url: String, filename: String, size: Number }],
   tenantIdDocs: [{ url: String, filename: String }],
   address: String,
   stationId: { type: Schema.Types.ObjectId, ref: 'Station', required: true },
