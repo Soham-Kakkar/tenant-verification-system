@@ -21,28 +21,25 @@ export default function Home() {
                   height={120}
                   className="rounded-full shadow-lg border-4 border-white"
                 />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
               </div>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            {/* <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Tenant Verification System
-            </h1>
+            </h1> */}
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Secure police department platform for tenant background verification.
               Connecting landlords and law enforcement for safer communities.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-1 gap-8 max-w-2xl mx-auto">
             <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-3 text-xl">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <Shield className="w-5 h-5 text-blue-600" />
                   </div>
-                  Landlord Portal
+                  Makan Malik Portal
                 </CardTitle>
                 <CardDescription className="text-base">
                   Submit tenant verification requests with secure OTP verification
@@ -51,13 +48,13 @@ export default function Home() {
               <CardContent>
                 <Link href="/landlord">
                   <Button className="w-full py-3 text-lg font-semibold bg-blue-600 hover:bg-blue-700">
-                    Access Landlord Form
+                    Verify My Tenant
                   </Button>
                 </Link>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            {/* <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-3 text-xl">
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -76,7 +73,7 @@ export default function Home() {
                   </Button>
                 </Link>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

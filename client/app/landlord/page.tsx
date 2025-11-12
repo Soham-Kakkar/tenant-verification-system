@@ -150,11 +150,11 @@ export default function LandlordForm() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="landlordName">Landlord Name *</Label>
+                  <Label htmlFor="landlordName">Landlord (Makan Malik) Name *</Label>
                   <Input
                     id="landlordName"
                     {...register('landlordName')}
-                    placeholder="Enter your full name"
+                    placeholder="Makan Malik Ka Naam"
                   />
                   {errors.landlordName && (
                     <p className="text-sm text-red-600 mt-1">{errors.landlordName.message}</p>
@@ -173,14 +173,21 @@ export default function LandlordForm() {
                   )}
                 </div>
               </div>
+              <hr style={{
+                margin:" 40px",
+                background:" #00000017",
+                display:" block",
+                height:" 4px",
+                borderRadius:" 99px",
+              } }/>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="tenantName">Tenant Name *</Label>
+                  <Label htmlFor="tenantName">Tenant (Kirayedar) Name *</Label>
                   <Input
                     id="tenantName"
                     {...register('tenantName')}
-                    placeholder="Enter tenant's full name"
+                    placeholder="Kirayedar Ka Naam"
                   />
                   {errors.tenantName && (
                     <p className="text-sm text-red-600 mt-1">{errors.tenantName.message}</p>
@@ -202,7 +209,7 @@ export default function LandlordForm() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fatherName">Father's Name *</Label>
+                  <Label htmlFor="fatherName">Tenant Father Name *</Label>
                   <Input
                     id="fatherName"
                     {...register('fatherName')}
@@ -245,7 +252,7 @@ export default function LandlordForm() {
                 <Textarea
                   id="previousAddress"
                   {...register('previousAddress')}
-                  placeholder="Enter previous address"
+                  placeholder="Kirayedar ka poorana address"
                   rows={2}
                 />
                 {errors.previousAddress && (
@@ -254,11 +261,11 @@ export default function LandlordForm() {
               </div>
 
               <div>
-                <Label htmlFor="address">Property Address *</Label>
+                <Label htmlFor="address">Address of Property *</Label>
                 <Textarea
                   id="address"
                   {...register('address')}
-                  placeholder="Enter complete property address"
+                  placeholder="Rent pe diye jane wale makan ka address"
                   rows={3}
                 />
                 {errors.address && (
