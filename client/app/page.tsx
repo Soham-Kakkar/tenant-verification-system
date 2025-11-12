@@ -21,9 +21,6 @@ export default function Home() {
                   height={120}
                   className="rounded-full shadow-lg border-4 border-white"
                 />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
               </div>
             </div>
             {/* <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
