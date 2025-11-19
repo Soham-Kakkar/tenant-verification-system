@@ -6,6 +6,7 @@ import Notification from '../models/notification.model';
 
 const delegateSchema = Joi.object({
   assigneeId: Joi.string().required(),
+  comment: Joi.string().allow(''),
 });
 
 const verifySchema = Joi.object({
@@ -20,13 +21,43 @@ export const getVerifications = async (req: Request, res: Response) => {
 
     if (user.role === 'admin1') {
       query.stationId = user.stationId;
-      query.status = { $in: ['pending', 'submitted', 'assigned'] };
+      query.$or = [
+        { status: { $in: ['pending', 'submitted', 'returned'] } },
+        { status: 'assigned', assignedTo: user._id }
+      ];
     } else if (user.role === 'admin2') {
       query.assignedTo = user._id;
     } else if (user.role === 'admin0') {
       query.regionId = user.regionId;
     } else if (user.role === 'superAdmin') {
       // SuperAdmin can see all
+    }
+
+    // Search functionality
+    const { searchText, startDate, endDate } = req.query;
+
+    if (searchText && typeof searchText === 'string') {
+      const regex = new RegExp(searchText, 'i');
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { landlordName: regex },
+          { landlordPhone: regex },
+          { tenantName: regex },
+          { tenantPhone: regex },
+          { address: regex },
+          { purposeOfStay: regex },
+          { previousAddress: regex },
+          { fatherName: regex },
+          { aadharNumber: regex }
+        ]
+      });
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate as string);
+      if (endDate) query.createdAt.$lte = new Date(endDate as string);
     }
 
     const verifications = await Verification.find(query)
@@ -47,6 +78,7 @@ export const getVerification = async (req: Request, res: Response) => {
       .populate('assignedTo', 'name email')
       .populate('assignedBy', 'name email')
       .populate('stationId', 'name')
+      .populate('regionId', 'name')
       .populate('history.actionBy', 'name');
 
     if (!verification) {
@@ -68,7 +100,7 @@ export const delegate = async (req: Request, res: Response) => {
 
     const user = req.user!;
     const { id } = req.params;
-    const { assigneeId } = value;
+    const { assigneeId, comment } = value;
 
     const verification = await Verification.findById(id);
     if (!verification) {
@@ -90,6 +122,7 @@ export const delegate = async (req: Request, res: Response) => {
     verification.history.push({
       actionBy: user._id as any,
       action: `Delegated to ${assignee.name}`,
+      comment,
       at: new Date(),
     });
     await verification.save();
@@ -136,19 +169,43 @@ export const verify = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Not allowed' });
     }
 
-    verification.status = result === 'verified' ? VerificationStatus.VERIFIED : VerificationStatus.FLAGGED;
-    verification.history.push({
-      actionBy: user._id as any,
-      action: result,
-      comment,
-      at: new Date(),
-    });
+    if (user.role === 'admin2') {
+      // Admin2 submits for admin1 final review
+      verification.status = VerificationStatus.RETURNED;
+      verification.assignedTo = undefined; // Clear assignment, status indicates it's returned for review
+      verification.history.push({
+        actionBy: user._id as any,
+        action: 'returned_for_final_review',
+        comment,
+        at: new Date(),
+      });
+    } else {
+      // Admin1, admin0, superAdmin set final status
+      verification.status = result === 'verified' ? VerificationStatus.VERIFIED : VerificationStatus.FLAGGED;
+      verification.history.push({
+        actionBy: user._id as any,
+        action: result,
+        comment,
+        at: new Date(),
+      });
+    }
     verification.updatedAt = new Date();
     await verification.save();
 
     // Notify assignedBy (admin1) and admin0
     const notifications = [];
-    if (verification.assignedBy) {
+    if (user.role === 'admin2' && verification.assignedBy) {
+      // Admin2 submitted, notify admin1 for final review
+      notifications.push(
+        Notification.create({
+          userId: verification.assignedBy,
+          title: 'Request ready for final verification',
+          body: `Request ${verification._id} is ready for your final review`,
+          meta: { verificationId: verification._id },
+        })
+      );
+    } else if (verification.assignedBy) {
+      // Final verification completed, notify admin1
       notifications.push(
         Notification.create({
           userId: verification.assignedBy,
@@ -216,7 +273,34 @@ export const getLogs = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Not allowed' });
     }
 
-    const matchQuery = user.role === 'admin0' ? { regionId: user.regionId } : {};
+    let matchQuery: any = user.role === 'admin0' ? { regionId: user.regionId } : {};
+
+    // Search functionality
+    const { searchText, startDate, endDate } = req.query;
+
+    if (searchText && typeof searchText === 'string') {
+      const regex = new RegExp(searchText, 'i');
+      matchQuery.$and = matchQuery.$and || [];
+      matchQuery.$and.push({
+        $or: [
+          { landlordName: regex },
+          { landlordPhone: regex },
+          { tenantName: regex },
+          { tenantPhone: regex },
+          { address: regex },
+          { purposeOfStay: regex },
+          { previousAddress: regex },
+          { fatherName: regex },
+          { aadharNumber: regex }
+        ]
+      });
+    }
+
+    if (startDate || endDate) {
+      matchQuery.updatedAt = {};
+      if (startDate) matchQuery.updatedAt.$gte = new Date(startDate as string);
+      if (endDate) matchQuery.updatedAt.$lte = new Date(endDate as string);
+    }
 
     const logs = await Verification.find({
       ...matchQuery,

@@ -7,8 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
-import { Shield, ArrowLeft } from 'lucide-react';
+import { Shield, ArrowLeft, Search } from 'lucide-react';
 
 interface LogEntry {
   _id: string;
@@ -33,11 +35,14 @@ interface LogEntry {
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.role !== 'admin0' && user.role !== 'superAdmin') {
+    if (!user) {
       router.push('/login');
       return;
     }
@@ -47,7 +52,12 @@ export default function LogsPage() {
 
   const fetchLogs = async () => {
     try {
-      const response = await api.get('/verification/logs');
+      const params = new URLSearchParams();
+      if (searchText) params.append('searchText', searchText);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const response = await api.get(`/verification/logs?${params.toString()}`);
       setLogs(response.data.logs);
     } catch (error) {
       console.error('Failed to fetch logs:', error);
@@ -93,12 +103,53 @@ export default function LogsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <Label htmlFor="searchText">Search</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      id="searchText"
+                      placeholder="Search by name, phone, address..."
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div>
+                    <Label htmlFor="startDate">From Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endDate">To Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={fetchLogs} variant="outline">
+                      <Search className="h-4 w-4 mr-2" />
+                      Search
+                    </Button>
+                  </div>
+                </div>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Region</TableHead>
                     <TableHead>Police Station</TableHead>
-                    <TableHead>Landlord Name</TableHead>
+                    <TableHead>Landlordcyb Name</TableHead>
                     <TableHead>Tenant Name</TableHead>
                     <TableHead>Father's Name</TableHead>
                     <TableHead>Aadhaar</TableHead>
@@ -157,19 +208,19 @@ export default function LogsPage() {
                                 {log.tenantPhoto?.map((photo, idx) => (
                                   <div key={idx}>
                                     <p className="text-sm font-medium">Tenant Photo</p>
-                                    <img src={`http://localhost:4000${photo.url}`} alt="Tenant" className="w-full h-32 object-cover rounded" />
+                                    <img src={`http://localhost:4000/landlord/image/${log._id}/tenant/${idx}`} alt="Tenant" className="w-full h-32 object-cover rounded" />
                                   </div>
                                 ))}
                                 {log.aadharPhoto?.map((photo, idx) => (
                                   <div key={idx}>
                                     <p className="text-sm font-medium">Aadhaar Photo</p>
-                                    <img src={`http://localhost:4000${photo.url}`} alt="Aadhaar" className="w-full h-32 object-cover rounded" />
+                                    <img src={`http://localhost:4000/landlord/image/${log._id}/aadhar/${idx}`} alt="Aadhaar" className="w-full h-32 object-cover rounded" />
                                   </div>
                                 ))}
                                 {log.familyPhoto?.map((photo, idx) => (
                                   <div key={idx}>
                                     <p className="text-sm font-medium">Family Photo</p>
-                                    <img src={`http://localhost:4000${photo.url}`} alt="Family" className="w-full h-32 object-cover rounded" />
+                                    <img src={`http://localhost:4000/landlord/image/${log._id}/family/${idx}`} alt="Family" className="w-full h-32 object-cover rounded" />
                                   </div>
                                 ))}
                               </div>

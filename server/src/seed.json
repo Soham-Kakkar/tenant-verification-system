@@ -1,0 +1,104 @@
+[
+  {
+    "sdpo": "SDPO West",
+    "units": [
+      "Bakshi Nagar",
+      "Janipur"
+    ]
+  },
+  {
+    "sdpo": "Dy.SP Hqrs.",
+    "units": [
+      "Nowabad",
+      "Women Cell"
+    ]
+  },
+  {
+    "sdpo": "SDPO R.S. Pura",
+    "units": [
+      "R.S. Pura",
+      "Bishnah",
+      "Miran Sahib",
+      "Arnia"
+    ]
+  },
+  {
+    "sdpo": "SDPO East",
+    "units": [
+      "Bahu Fort",
+      "Channi",
+      "Bagh-e-Bahu"
+    ]
+  },
+  {
+    "sdpo": "SDPO Akhnoor",
+    "units": [
+      "Akhnoor",
+      "Gharota",
+      "Khour"
+    ]
+  },
+  {
+    "sdpo": "SDPO City North",
+    "units": [
+      "Pacca Danga",
+      "City",
+      "Peermitha",
+      "Bus Stand"
+    ]
+  },
+  {
+    "sdpo": "SDPO City South",
+    "units": [
+      "Gandhi Nagar",
+      "Satwari",
+      "Gangyal"
+    ]
+  },
+  {
+    "sdpo": "SDPO Nagrota",
+    "units": [
+      "Nagrota (Jagti)",
+      "Jhajjer Kotli"
+    ]
+  },
+  {
+    "sdpo": "SDPO Domana",
+    "units": [
+      "Domana",
+      "Kahna Chak"
+    ]
+  },
+  {
+    "sdpo": "DAR DPL Jammu",
+    "units": []
+  },
+  {
+    "sdpo": "DSB",
+    "units": []
+  },
+  {
+    "sdpo": "PC Jammu (1)",
+    "units": []
+  },
+  {
+    "sdpo": "PC Jammu (2)",
+    "units": []
+  },
+  {
+    "sdpo": "Sr. PO DPO Jammu",
+    "units": []
+  },
+  {
+    "sdpo": "Sr. PO",
+    "units": []
+  },
+  {
+    "sdpo": "PO",
+    "units": []
+  },
+  {
+    "sdpo": "CPO Saddar Courts",
+    "units": []
+  }
+]

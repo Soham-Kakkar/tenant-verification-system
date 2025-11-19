@@ -4,6 +4,7 @@ export enum VerificationStatus {
   PENDING = 'pending',
   SUBMITTED = 'submitted',
   ASSIGNED = 'assigned',
+  RETURNED = 'returned',
   VERIFIED = 'verified',
   FLAGGED = 'flagged'
 }
@@ -12,16 +13,17 @@ export interface IVerification extends Document {
   landlordName: string;
   landlordPhone: string;
   tenantName: string;
-  tenantPhone?: string;
+  tenantPhones?: string[];
   fatherName?: string;
   aadharNumber?: string;
   purposeOfStay?: string;
   previousAddress?: string;
-  tenantPhoto?: { url: string; filename: string; size: number }[];
-  aadharPhoto?: { url: string; filename: string; size: number }[];
-  familyPhoto?: { url: string; filename: string; size: number }[];
-  tenantIdDocs?: { url: string; filename: string }[];
+  tenantPhoto?: { data: Buffer; contentType: string; filename: string; size: number }[];
+  aadharPhoto?: { data: Buffer; contentType: string; filename: string; size: number }[];
+  familyPhoto?: { data: Buffer; contentType: string; filename: string; size: number }[];
+  tenantIdDocs?: { data: Buffer; contentType: string; filename: string }[];
   address?: string;
+  familyMembers?: number;
   stationId: Schema.Types.ObjectId;
   regionId: Schema.Types.ObjectId;
   status: VerificationStatus;
@@ -33,7 +35,7 @@ export interface IVerification extends Document {
   createdAt: Date;
   updatedAt?: Date;
   history: {
-    actionBy: Schema.Types.ObjectId;
+    actionBy: string;
     action: string;
     comment?: string;
     at: Date;
@@ -43,19 +45,39 @@ export interface IVerification extends Document {
 const VerificationSchema = new Schema<IVerification>({
   landlordName: { type: String, required: true },
   landlordPhone: { type: String, required: true },
-  tenantName: { type: String, required: true },
-  tenantPhone: String,
+  tenantName: { type: String, required: false },
+  tenantPhones: [String],
   fatherName: String,
   aadharNumber: String,
   purposeOfStay: String,
   previousAddress: String,
-  tenantPhoto: [{ url: String, filename: String, size: Number }],
-  aadharPhoto: [{ url: String, filename: String, size: Number }],
-  familyPhoto: [{ url: String, filename: String, size: Number }],
-  tenantIdDocs: [{ url: String, filename: String }],
-  address: String,
-  stationId: { type: Schema.Types.ObjectId, ref: 'Station', required: true },
-  regionId: { type: Schema.Types.ObjectId, ref: 'Region', required: true },
+  familyMembers: Number,
+  tenantPhoto: [{
+    data: Buffer,
+    contentType: String,
+    filename: String,
+    size: Number
+  }],
+  aadharPhoto: [{
+    data: Buffer,
+    contentType: String,
+    filename: String,
+    size: Number
+  }],
+  familyPhoto: [{
+    data: Buffer,
+    contentType: String,
+    filename: String,
+    size: Number
+  }],
+  tenantIdDocs: [{
+    data: Buffer,
+    contentType: String,
+    filename: String
+  }],
+  address: { type: String, required: true },
+  stationId: { type: Schema.Types.ObjectId, ref: 'Station', required: false },
+  regionId: { type: Schema.Types.ObjectId, ref: 'Region', required: false },
   status: { type: String, enum: Object.values(VerificationStatus), default: VerificationStatus.PENDING },
   otpCode: String,
   otpExpiresAt: Date,

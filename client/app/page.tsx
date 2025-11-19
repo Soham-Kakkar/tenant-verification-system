@@ -33,9 +33,9 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-1 gap-8 max-w-2xl mx-auto">
-            <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg bg-white/80 backdrop-blur-sm text-center">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-xl">
+                <CardTitle className="flex items-center gap-3 text-xl justify-center">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <Shield className="w-5 h-5 text-blue-600" />
                   </div>

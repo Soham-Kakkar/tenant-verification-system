@@ -23,7 +23,7 @@ export function Navbar() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    router.push('/');
+    router.push('/login');
   };
 
   return (
@@ -65,12 +65,6 @@ export function Navbar() {
                   <Button variant="ghost" size="sm" className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     <span className="hidden sm:inline">Landlord</span>
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <LogIn className="w-4 h-4" />
-                    <span className="hidden sm:inline">Login</span>
                   </Button>
                 </Link>
               </>

@@ -15,47 +15,83 @@ import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Clock } from 'lucide-react';
 
-const schema = Joi.object({
+const landlordSchema = Joi.object({
   landlordName: Joi.string().required(),
   landlordPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
+  address: Joi.string().required(),
+});
+
+const tenantSchema = Joi.object({
   tenantName: Joi.string().required(),
-  tenantPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
+  tenantPhones: Joi.array().items(Joi.string().pattern(/^\+?[1-9]\d{1,14}$/)).min(1).required(),
   fatherName: Joi.string().optional(),
   aadharNumber: Joi.string().pattern(/^\d{12}$/).optional(),
   purposeOfStay: Joi.string().optional(),
   previousAddress: Joi.string().optional(),
-  address: Joi.string().required(),
+  familyMembers: Joi.number().integer().min(1).optional(),
   stationId: Joi.string().required(),
 });
 
-type FormData = {
+type LandlordData = {
   landlordName: string;
   landlordPhone: string;
+  address: string;
+};
+
+type TenantData = {
   tenantName: string;
-  tenantPhone: string;
+  tenantPhones: string[];
   fatherName?: string;
   aadharNumber?: string;
   purposeOfStay?: string;
   previousAddress?: string;
-  address: string;
+  familyMembers?: number;
   stationId: string;
 };
 
-type Step = 'form' | 'otp' | 'success';
+type Step = 'landlord' | 'otp' | 'tenant' | 'success';
 
 export default function LandlordForm() {
-  const [currentStep, setCurrentStep] = useState<Step>('form');
+  const [currentStep, setCurrentStep] = useState<Step>('landlord');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationId, setVerificationId] = useState<string>('');
   const [otpError, setOtpError] = useState<string>('');
   const [files, setFiles] = useState<{ tenantPhoto?: File; aadharPhoto?: File; familyPhoto?: File }>({});
   const [fileErrors, setFileErrors] = useState<string>('');
+  const [landlordData, setLandlordData] = useState<LandlordData | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>({
-    resolver: joiResolver(schema),
+  const landlordForm = useForm<LandlordData>({
+    resolver: joiResolver(landlordSchema),
   });
 
-  const onSubmit = async (data: FormData) => {
+  const tenantForm = useForm<TenantData>({
+    resolver: joiResolver(tenantSchema),
+    defaultValues: {
+      tenantPhones: [''],
+      fatherName: '',
+      aadharNumber: '',
+      purposeOfStay: '',
+      previousAddress: '',
+    },
+  });
+
+  const landlordOnSubmit = async (data: LandlordData) => {
+    setIsSubmitting(true);
+    try {
+      const response = await api.post('/landlord/register', data);
+      setVerificationId(response.data.verificationId);
+      setLandlordData(data);
+      setCurrentStep('otp');
+    } catch (error: any) {
+      console.error('Landlord registration failed:', error);
+      // Set error in form or alert
+      landlordForm.setError('root', { message: error.response?.data?.error || 'Landlord registration failed' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const tenantOnSubmit = async (data: TenantData) => {
     setIsSubmitting(true);
     setFileErrors('');
 
@@ -69,21 +105,30 @@ export default function LandlordForm() {
 
     try {
       const formData = new FormData();
+      // Add landlord data
+      formData.append('landlordName', landlordData!.landlordName);
+      formData.append('landlordPhone', landlordData!.landlordPhone);
+      // Add tenant data
       Object.entries(data).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach(item => formData.append(key, item));
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
       });
       if (files.tenantPhoto) formData.append('tenantPhoto', files.tenantPhoto);
       if (files.aadharPhoto) formData.append('aadharPhoto', files.aadharPhoto);
       if (files.familyPhoto) formData.append('familyPhoto', files.familyPhoto);
 
-      const response = await api.post('/landlord/request', formData, {
+      await api.patch(`/landlord/${verificationId}/complete`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setVerificationId(response.data.verificationId);
-      setCurrentStep('otp');
+      setCurrentStep('success');
     } catch (error: any) {
-      console.error('Submission failed:', error);
-      setFileErrors(error.response?.data?.error || 'Submission failed');
+      console.error('Tenant submission failed:', error);
+      setFileErrors(error.response?.data?.error || 'Tenant submission failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,7 +139,7 @@ export default function LandlordForm() {
     setOtpError('');
     try {
       await api.post('/landlord/verify-otp', { verificationId, otp });
-      setCurrentStep('success');
+      setCurrentStep('tenant');
     } catch (error: any) {
       setOtpError(error.response?.data?.error || 'OTP verification failed');
     } finally {
@@ -104,6 +149,249 @@ export default function LandlordForm() {
 
   if (currentStep === 'otp') {
     return <OtpVerification onVerify={verifyOtp} isSubmitting={isSubmitting} error={otpError} />;
+  }
+
+  if (currentStep === 'tenant') {
+    return (
+      <div className=" bg-gray-50 p-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-6">
+            <Button variant="ghost" onClick={() => setCurrentStep('landlord')}>← Back to Landlord Details</Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tenant Details</CardTitle>
+              <CardDescription>
+                Please fill out the tenant's information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={tenantForm.handleSubmit(tenantOnSubmit)} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tenantName">Tenant (Kirayedar) Name *</Label>
+                    <Input
+                      id="tenantName"
+                      {...tenantForm.register('tenantName')}
+                      placeholder="Kirayedar Ka Naam"
+                    />
+                    {tenantForm.formState.errors.tenantName && (
+                      <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.tenantName.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="familyMembers">Number of Family Members</Label>
+                    <Input
+                      id="familyMembers"
+                      type="number"
+                      {...tenantForm.register('familyMembers', { valueAsNumber: true })}
+                      placeholder="e.g., 4"
+                      min={1}
+                    />
+                    {tenantForm.formState.errors.familyMembers && (
+                      <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.familyMembers.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tenantPhones">Tenant Phone Numbers *</Label>
+                  <div className="space-y-2">
+                    {((tenantForm.watch('tenantPhones') || []) as string[]).map((phone, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={phone}
+                          onChange={(e) => {
+                            const phones = (tenantForm.watch('tenantPhones') || []) as string[];
+                            const newPhones = [...phones];
+                            newPhones[index] = e.target.value;
+                            tenantForm.setValue('tenantPhones', newPhones);
+                          }}
+                          placeholder={`Phone ${index + 1}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            const phones = (tenantForm.watch('tenantPhones') || []) as string[];
+                            const newPhones = phones.filter((_, i) => i !== index);
+                            tenantForm.setValue('tenantPhones', newPhones.length > 0 ? newPhones : ['']);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const phones = (tenantForm.watch('tenantPhones') || []) as string[];
+                        tenantForm.setValue('tenantPhones', [...phones, '']);
+                      }}
+                      className="w-full"
+                    >
+                      Add Phone Number
+                    </Button>
+                  </div>
+                  {tenantForm.formState.errors.tenantPhones && (
+                    <p className="text-sm text-red-600 mt-1">{(tenantForm.formState.errors.tenantPhones as any).message}</p>
+                  )}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="fatherName">Tenant Father Name</Label>
+                    <Input
+                      id="fatherName"
+                      {...tenantForm.register('fatherName')}
+                      placeholder="Enter father's full name"
+                    />
+                    {tenantForm.formState.errors.fatherName && (
+                      <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.fatherName.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="aadharNumber">Aadhaar Number</Label>
+                    <Input
+                      id="aadharNumber"
+                      {...tenantForm.register('aadharNumber')}
+                      placeholder="123456789012"
+                      maxLength={12}
+                    />
+                    {tenantForm.formState.errors.aadharNumber && (
+                      <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.aadharNumber.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="purposeOfStay">Purpose of Stay (Max 500 characters)</Label>
+                  <Textarea
+                    id="purposeOfStay"
+                    {...tenantForm.register('purposeOfStay')}
+                    placeholder="Enter purpose of stay"
+                    rows={2}
+                    maxLength={500}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {tenantForm.watch('purposeOfStay')?.length || 0}/500 characters
+                  </div>
+                  {tenantForm.formState.errors.purposeOfStay && (
+                    <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.purposeOfStay.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="previousAddress">Previous Address (Max 500 characters)</Label>
+                  <Textarea
+                    id="previousAddress"
+                    {...tenantForm.register('previousAddress')}
+                    placeholder="Kirayedar ka poorana address"
+                    rows={2}
+                    maxLength={500}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {tenantForm.watch('previousAddress')?.length || 0}/500 characters
+                  </div>
+                  {tenantForm.formState.errors.previousAddress && (
+                    <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.previousAddress.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="stationId">Police Station *</Label>
+                  <Select onValueChange={(value) => tenantForm.setValue('stationId', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select police station" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Central Police Station">Central Police Station</SelectItem>
+                      <SelectItem value="North Police Station">North Police Station</SelectItem>
+                      <SelectItem value="South Police Station">South Police Station</SelectItem>
+                      <SelectItem value="East Police Station">East Police Station</SelectItem>
+                      <SelectItem value="West Police Station">West Police Station</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {tenantForm.formState.errors.stationId && (
+                    <p className="text-sm text-red-600 mt-1">{tenantForm.formState.errors.stationId.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <Label>Upload Photos (Max 2MB each)</Label>
+
+                  <div>
+                    <Label htmlFor="tenantPhoto">Tenant Photograph *</Label>
+                    <Input
+                      id="tenantPhoto"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.size > 2 * 1024 * 1024) {
+                          alert('Tenant photo must be less than 2MB');
+                          return;
+                        }
+                        setFiles(prev => ({ ...prev, tenantPhoto: file }));
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="aadharPhoto">Aadhaar Photograph *</Label>
+                    <Input
+                      id="aadharPhoto"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.size > 2 * 1024 * 1024) {
+                          alert('Aadhaar photo must be less than 2MB');
+                          return;
+                        }
+                        setFiles(prev => ({ ...prev, aadharPhoto: file }));
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="familyPhoto">Family Photograph *</Label>
+                    <Input
+                      id="familyPhoto"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.size > 2 * 1024 * 1024) {
+                          alert('Family photo must be less than 2MB');
+                          return;
+                        }
+                        setFiles(prev => ({ ...prev, familyPhoto: file }));
+                      }}
+                    />
+                  </div>
+
+                  {fileErrors && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{fileErrors}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (currentStep === 'success') {
@@ -130,6 +418,7 @@ export default function LandlordForm() {
     );
   }
 
+  // Landlord form
   return (
     <div className=" bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
@@ -141,23 +430,23 @@ export default function LandlordForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Tenant Verification Request</CardTitle>
+            <CardTitle>Landlord Details</CardTitle>
             <CardDescription>
-              Please fill out this form to verify your tenant's background.
+              Please provide your details to start the verification process.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={landlordForm.handleSubmit(landlordOnSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="landlordName">Landlord (Makan Malik) Name *</Label>
                   <Input
                     id="landlordName"
-                    {...register('landlordName')}
+                    {...landlordForm.register('landlordName')}
                     placeholder="Makan Malik Ka Naam"
                   />
-                  {errors.landlordName && (
-                    <p className="text-sm text-red-600 mt-1">{errors.landlordName.message}</p>
+                  {landlordForm.formState.errors.landlordName && (
+                    <p className="text-sm text-red-600 mt-1">{landlordForm.formState.errors.landlordName.message}</p>
                   )}
                 </div>
 
@@ -165,196 +454,40 @@ export default function LandlordForm() {
                   <Label htmlFor="landlordPhone">Landlord Phone *</Label>
                   <Input
                     id="landlordPhone"
-                    {...register('landlordPhone')}
+                    {...landlordForm.register('landlordPhone')}
                     placeholder="+1234567890"
                   />
-                  {errors.landlordPhone && (
-                    <p className="text-sm text-red-600 mt-1">{errors.landlordPhone.message}</p>
-                  )}
-                </div>
-              </div>
-              <hr style={{
-                margin:" 40px",
-                background:" #00000017",
-                display:" block",
-                height:" 4px",
-                borderRadius:" 99px",
-              } }/>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tenantName">Tenant (Kirayedar) Name *</Label>
-                  <Input
-                    id="tenantName"
-                    {...register('tenantName')}
-                    placeholder="Kirayedar Ka Naam"
-                  />
-                  {errors.tenantName && (
-                    <p className="text-sm text-red-600 mt-1">{errors.tenantName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="tenantPhone">Tenant Phone *</Label>
-                  <Input
-                    id="tenantPhone"
-                    {...register('tenantPhone')}
-                    placeholder="+1234567890"
-                  />
-                  {errors.tenantPhone && (
-                    <p className="text-sm text-red-600 mt-1">{errors.tenantPhone.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="fatherName">Tenant Father Name *</Label>
-                  <Input
-                    id="fatherName"
-                    {...register('fatherName')}
-                    placeholder="Enter father's full name"
-                  />
-                  {errors.fatherName && (
-                    <p className="text-sm text-red-600 mt-1">{errors.fatherName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="aadharNumber">Aadhaar Number *</Label>
-                  <Input
-                    id="aadharNumber"
-                    {...register('aadharNumber')}
-                    placeholder="123456789012"
-                    maxLength={12}
-                  />
-                  {errors.aadharNumber && (
-                    <p className="text-sm text-red-600 mt-1">{errors.aadharNumber.message}</p>
+                  {landlordForm.formState.errors.landlordPhone && (
+                    <p className="text-sm text-red-600 mt-1">{landlordForm.formState.errors.landlordPhone.message}</p>
                   )}
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="purposeOfStay">Purpose of Stay *</Label>
-                <Textarea
-                  id="purposeOfStay"
-                  {...register('purposeOfStay')}
-                  placeholder="Enter purpose of stay"
-                  rows={2}
-                />
-                {errors.purposeOfStay && (
-                  <p className="text-sm text-red-600 mt-1">{errors.purposeOfStay.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="previousAddress">Previous Address *</Label>
-                <Textarea
-                  id="previousAddress"
-                  {...register('previousAddress')}
-                  placeholder="Kirayedar ka poorana address"
-                  rows={2}
-                />
-                {errors.previousAddress && (
-                  <p className="text-sm text-red-600 mt-1">{errors.previousAddress.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address of Property *</Label>
+                <Label htmlFor="address">Address of Property * (Max 500 characters)</Label>
                 <Textarea
                   id="address"
-                  {...register('address')}
+                  {...landlordForm.register('address')}
                   placeholder="Rent pe diye jane wale makan ka address"
                   rows={3}
+                  maxLength={500}
                 />
-                {errors.address && (
-                  <p className="text-sm text-red-600 mt-1">{errors.address.message}</p>
+                <div className="text-xs text-gray-500 mt-1">
+                  {landlordForm.watch('address')?.length || 0}/500 characters
+                </div>
+                {landlordForm.formState.errors.address && (
+                  <p className="text-sm text-red-600 mt-1">{landlordForm.formState.errors.address.message}</p>
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="stationId">Police Station *</Label>
-                <Select onValueChange={(value) => setValue('stationId', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select police station" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Central Police Station">Central Police Station</SelectItem>
-                    <SelectItem value="North Police Station">North Police Station</SelectItem>
-                    <SelectItem value="South Police Station">South Police Station</SelectItem>
-                    <SelectItem value="East Police Station">East Police Station</SelectItem>
-                    <SelectItem value="West Police Station">West Police Station</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.stationId && (
-                  <p className="text-sm text-red-600 mt-1">{errors.stationId.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <Label>Upload Photos (Max 2MB each)</Label>
-
-                <div>
-                  <Label htmlFor="tenantPhoto">Tenant Photograph *</Label>
-                  <Input
-                    id="tenantPhoto"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file && file.size > 2 * 1024 * 1024) {
-                        alert('Tenant photo must be less than 2MB');
-                        return;
-                      }
-                      setFiles(prev => ({ ...prev, tenantPhoto: file }));
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="aadharPhoto">Aadhaar Photograph *</Label>
-                  <Input
-                    id="aadharPhoto"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file && file.size > 2 * 1024 * 1024) {
-                        alert('Aadhaar photo must be less than 2MB');
-                        return;
-                      }
-                      setFiles(prev => ({ ...prev, aadharPhoto: file }));
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="familyPhoto">Family Photograph *</Label>
-                  <Input
-                    id="familyPhoto"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file && file.size > 2 * 1024 * 1024) {
-                        alert('Family photo must be less than 2MB');
-                        return;
-                      }
-                      setFiles(prev => ({ ...prev, familyPhoto: file }));
-                    }}
-                  />
-                </div>
-
-                {fileErrors && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{fileErrors}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
+              {landlordForm.formState.errors.root && (
+                <Alert variant="destructive">
+                  <AlertDescription>{landlordForm.formState.errors.root.message}</AlertDescription>
+                </Alert>
+              )}
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                {isSubmitting ? 'Registering...' : 'Continue to Verification'}
               </Button>
             </form>
           </CardContent>

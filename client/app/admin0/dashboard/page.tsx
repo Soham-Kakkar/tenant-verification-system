@@ -26,9 +26,11 @@ export default function Admin0Dashboard() {
   const fetchStats = async () => {
     try {
       const response = await api.get('/verification/stats');
+      if (response.status = 401) logout();
       setStats(response.data.stats);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
+      if ((error as any).status = 401) logout();
     } finally {
       setLoading(false);
     }
@@ -37,7 +39,7 @@ export default function Admin0Dashboard() {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/');
+    router.push('/login');
   };
 
   const totalRequests = stats.reduce((sum, day) => sum + day.submitted + day.assigned + day.verified + day.flagged, 0);

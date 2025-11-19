@@ -79,7 +79,7 @@ export default function SuperAdminDashboard() {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/');
+    router.push('/login');
   };
 
   const getRoleBadgeColor = (role: string) => {

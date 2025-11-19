@@ -13,7 +13,7 @@ import { api, User } from '@/lib/api';
 import Link from 'next/link';
 
 const schema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().required(),
   password: Joi.string().min(6).required(),
 });
 
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
+                  type="text"
                   {...register('password')}
                   placeholder="Enter your password"
                 />

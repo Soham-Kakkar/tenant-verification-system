@@ -13,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.18.3",
+  "packageManager": "pnpm@10.22.0",
   "dependencies": {
     "@types/multer": "^2.0.0",
     "bcryptjs": "^2.4.3",

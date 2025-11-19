@@ -44,7 +44,7 @@ export interface Verification {
   address: string;
   stationId: string;
   regionId: string;
-  status: 'pending' | 'submitted' | 'assigned' | 'verified' | 'flagged';
+  status: 'pending' | 'submitted' | 'assigned' | 'returned' | 'verified' | 'flagged';
   assignedTo?: User;
   assignedBy?: User;
   history: Array<{
@@ -56,6 +56,16 @@ export interface Verification {
   createdAt: string;
   updatedAt: string;
 }
+
+export const getUserName = async (userId: string): Promise<string> => {
+  try {
+    const response = await api.get(`/users/${userId}`);
+    return response.data.name;
+  } catch (error) {
+    console.error('Failed to fetch user name:', error);
+    return 'Unknown';
+  }
+};
 
 export interface Notification {
   _id: string;

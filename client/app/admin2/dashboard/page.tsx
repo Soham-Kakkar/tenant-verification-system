@@ -8,14 +8,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { api, Verification } from '@/lib/api';
-import { Shield } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { api, Verification, getUserName } from '@/lib/api';
+import { Shield, Search } from 'lucide-react';
 
 export default function Admin2Dashboard() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
+  const [populatedHistory, setPopulatedHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingVerification, setLoadingVerification] = useState(false);
   const [comment, setComment] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -28,9 +35,36 @@ export default function Admin2Dashboard() {
     fetchVerifications();
   }, []);
 
+  useEffect(() => {
+    if (selectedVerification) {
+      setLoadingHistory(true);
+      const populateHistory = async () => {
+        const updatedHistory = await Promise.all(
+          selectedVerification.history.map(async (entry) => {
+            let actionByName = entry.actionBy;
+            if (typeof entry.actionBy === 'string' && entry.actionBy.match(/^[0-9a-fA-F]{24}$/)) {
+              actionByName = await getUserName(entry.actionBy);
+            }
+            return { ...entry, actionBy: actionByName };
+          })
+        );
+        setPopulatedHistory(updatedHistory);
+        setLoadingHistory(false);
+      };
+      populateHistory();
+    } else {
+      setPopulatedHistory([]);
+    }
+  }, [selectedVerification]);
+
   const fetchVerifications = async () => {
     try {
-      const response = await api.get('/verification');
+      const params = new URLSearchParams();
+      if (searchText) params.append('searchText', searchText);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const response = await api.get(`/verification?${params.toString()}`);
       setVerifications(response.data);
     } catch (error) {
       console.error('Failed to fetch verifications:', error);
@@ -39,13 +73,9 @@ export default function Admin2Dashboard() {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
-  };
 
-  const getStatusBadgeColor = (status: string) => {
+
+  const getStatusBadgeColor = (status: string): string => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'assigned': return 'bg-blue-100 text-blue-800';
@@ -55,7 +85,8 @@ export default function Admin2Dashboard() {
     }
   };
 
-  const handleVerify = async (verificationId: string, result: 'verified' | 'flagged') => {
+  const handleVerify = async (verificationId: string, result: 'verified' | 'flagged'): Promise<void> => {
+    setLoadingVerification(true);
     try {
       await api.post(`/verification/${verificationId}/verify`, { result, comment });
       setSelectedVerification(null);
@@ -63,6 +94,8 @@ export default function Admin2Dashboard() {
       fetchVerifications();
     } catch (error) {
       console.error('Failed to verify:', error);
+    } finally {
+      setLoadingVerification(false);
     }
   };
 
@@ -96,6 +129,8 @@ export default function Admin2Dashboard() {
                     <div className="space-y-2 text-sm">
                       <p><strong>Name:</strong> {selectedVerification.tenantName}</p>
                       <p><strong>Phone:</strong> {selectedVerification.tenantPhone}</p>
+                      <p><strong>Father's Name:</strong> {selectedVerification.fatherName || 'N/A'}</p>
+                      <p><strong>Aadhaar:</strong> {selectedVerification.aadharNumber || 'N/A'}</p>
                     </div>
                   </div>
                   <div>
@@ -113,6 +148,60 @@ export default function Admin2Dashboard() {
                 </div>
 
                 <div>
+                  <h3 className="font-semibold mb-2">Purpose of Stay</h3>
+                  <p className="text-sm">{selectedVerification.purposeOfStay || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Previous Address</h3>
+                  <p className="text-sm">{selectedVerification.previousAddress || 'N/A'}</p>
+                </div>
+
+                {(selectedVerification.tenantPhoto?.length || selectedVerification.aadharPhoto?.length || selectedVerification.familyPhoto?.length) && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Photos</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {selectedVerification.tenantPhoto?.map((photo, idx) => (
+                        <div key={idx}>
+                          <p className="text-sm font-medium">Tenant Photo</p>
+                          <img src={`http://localhost:4000/landlord/image/${selectedVerification._id}/tenant/${idx}`} alt="Tenant" className="w-full h-32 object-cover rounded" />
+                        </div>
+                      ))}
+                      {selectedVerification.aadharPhoto?.map((photo, idx) => (
+                        <div key={idx}>
+                          <p className="text-sm font-medium">Aadhaar Photo</p>
+                          <img src={`http://localhost:4000/landlord/image/${selectedVerification._id}/aadhar/${idx}`} alt="Aadhaar" className="w-full h-32 object-cover rounded" />
+                        </div>
+                      ))}
+                      {selectedVerification.familyPhoto?.map((photo, idx) => (
+                        <div key={idx}>
+                          <p className="text-sm font-medium">Family Photo</p>
+                          <img src={`http://localhost:4000/landlord/image/${selectedVerification._id}/family/${idx}`} alt="Family" className="w-full h-32 object-cover rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(selectedVerification.history && selectedVerification.history.length > 0) && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Previous Comments</h3>
+                    {loadingHistory ? (
+                      <p className="text-sm text-gray-500">Loading comments...</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {populatedHistory.map((entry, idx) => (
+                          <div key={idx} className="bg-gray-50 p-3 rounded text-sm">
+                            <p><strong>{entry.actionBy}:</strong> {entry.comment || 'No comment'}</p>
+                            <p className="text-gray-500 text-xs">{new Date(entry.at).toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div>
                   <Label htmlFor="comment">Comments (Optional)</Label>
                   <Textarea
                     id="comment"
@@ -127,19 +216,22 @@ export default function Admin2Dashboard() {
                   <Button
                     onClick={() => handleVerify(selectedVerification._id, 'verified')}
                     className="flex-1"
+                    disabled={loadingVerification}
                   >
-                    Verify as Clear
+                    {loadingVerification ? 'Verifying...' : 'Verify as Clear'}
                   </Button>
                   <Button
                     onClick={() => handleVerify(selectedVerification._id, 'flagged')}
                     variant="destructive"
                     className="flex-1"
+                    disabled={loadingVerification}
                   >
-                    Flag for Review
+                    {loadingVerification ? 'Flagging...' : 'Flag for Review'}
                   </Button>
                   <Button
                     onClick={() => setSelectedVerification(null)}
                     variant="outline"
+                    disabled={loadingVerification}
                   >
                     Cancel
                   </Button>
@@ -155,6 +247,47 @@ export default function Admin2Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  <div className="flex-1">
+                    <Label htmlFor="searchText">Search</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="searchText"
+                        placeholder="Search by name, phone, address..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div>
+                      <Label htmlFor="startDate">From Date</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="endDate">To Date</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button onClick={fetchVerifications} variant="outline">
+                        <Search className="h-4 w-4 mr-2" />
+                        Search
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>

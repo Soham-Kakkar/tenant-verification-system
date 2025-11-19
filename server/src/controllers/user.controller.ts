@@ -55,13 +55,28 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    // Validate station and region if provided
-    if (stationId) {
-      const station = await Station.findById(stationId);
+    let actualStationId: Types.ObjectId | undefined;
+    let actualRegionId: Types.ObjectId | undefined;
+
+    // Convert station name to ObjectId if provided
+    if (stationId && typeof stationId === 'string') {
+      const station = await Station.findOne({ name: stationId });
+      if (!station) return res.status(400).json({ error: 'Invalid station' });
+      actualStationId = station._id as Types.ObjectId;
+    } else if (stationId) {
+      actualStationId = new Types.ObjectId(stationId as string);
+      const station = await Station.findById(actualStationId);
       if (!station) return res.status(400).json({ error: 'Invalid station' });
     }
-    if (regionId) {
-      const region = await Region.findById(regionId);
+
+    // Convert region name to ObjectId if provided
+    if (regionId && typeof regionId === 'string') {
+      const region = await Region.findOne({ name: regionId });
+      if (!region) return res.status(400).json({ error: 'Invalid region' });
+      actualRegionId = region._id as Types.ObjectId;
+    } else if (regionId) {
+      actualRegionId = new Types.ObjectId(regionId as string);
+      const region = await Region.findById(actualRegionId);
       if (!region) return res.status(400).json({ error: 'Invalid region' });
     }
 
@@ -72,8 +87,8 @@ export const createUser = async (req: Request, res: Response) => {
       email,
       passwordHash,
       role,
-      stationId,
-      regionId,
+      stationId: actualStationId,
+      regionId: actualRegionId,
     });
 
     await newUser.save();
@@ -94,7 +109,32 @@ export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, email, role, stationId, regionId, password } = req.body;
 
-    const updateData: any = { name, email, role, stationId, regionId };
+    let actualStationId: Types.ObjectId | undefined;
+    let actualRegionId: Types.ObjectId | undefined;
+
+    // Convert station name to ObjectId if provided
+    if (stationId && typeof stationId === 'string') {
+      const station = await Station.findOne({ name: stationId });
+      if (!station) return res.status(400).json({ error: 'Invalid station' });
+      actualStationId = station._id as Types.ObjectId;
+    } else if (stationId) {
+      actualStationId = new Types.ObjectId(stationId as string);
+      const station = await Station.findById(actualStationId);
+      if (!station) return res.status(400).json({ error: 'Invalid station' });
+    }
+
+    // Convert region name to ObjectId if provided
+    if (regionId && typeof regionId === 'string') {
+      const region = await Region.findOne({ name: regionId });
+      if (!region) return res.status(400).json({ error: 'Invalid region' });
+      actualRegionId = region._id as Types.ObjectId;
+    } else if (regionId) {
+      actualRegionId = new Types.ObjectId(regionId as string);
+      const region = await Region.findById(actualRegionId);
+      if (!region) return res.status(400).json({ error: 'Invalid region' });
+    }
+
+    const updateData: any = { name, email, role, stationId: actualStationId, regionId: actualRegionId };
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
@@ -131,5 +171,20 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+};
+
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select('name email');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user' });
   }
 };
